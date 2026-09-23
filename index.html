@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MotoRAD - Servis & Inventaris Bengkel Motor</title>
+    <meta name="description" content="Platform manajemen servis motor dan inventaris suku cadang real-time berbasis Rapid Application Development (RAD) dengan antarmuka modern glassmorphism neon blue, analitik bengkel, kontrol akses karyawan, dan ekspor laporan." />
+    <meta property="og:title" content="MotoRAD - Servis & Inventaris Bengkel Motor" />
+    <meta property="og:description" content="Platform manajemen servis motor dan inventaris suku cadang real-time berbasis Rapid Application Development (RAD) dengan antarmuka modern glassmorphism neon blue, analitik bengkel, kontrol akses karyawan, dan ekspor laporan." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    <!-- Script Deteksi Sistem Tema (Light/Dark Mode) OS Awal -->
+    <script>
+      (function() {
+        try {
+          var stored = localStorage.getItem('motorad_theme_v1');
+          var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = stored === 'dark' || (stored !== 'light' && systemDark);
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.classList.remove('light');
+            document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.style.colorScheme = 'dark';
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
+            document.documentElement.setAttribute('data-theme', 'light');
+            document.documentElement.style.colorScheme = 'light';
+          }
+        } catch (e) {}
+      })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  </head>
+  <body class="antialiased selection:bg-sky-500/25 selection:text-sky-800 dark:selection:text-sky-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

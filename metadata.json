@@ -1,0 +1,6 @@
+{
+  "name": "MotoRAD - Servis & Inventaris Bengkel Motor",
+  "description": "Platform manajemen servis motor dan inventaris suku cadang real-time berbasis Rapid Application Development (RAD) dengan antarmuka modern glassmorphism neon blue, analitik bengkel, kontrol akses karyawan, dan ekspor laporan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
