@@ -38,7 +38,9 @@ interface WorkshopContextType {
   currentEmployee: Employee;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isGuestVisitor: boolean;
   login: (email: string, password?: string) => { success: boolean; message: string };
+  loginAsGuest: () => void;
   logout: () => void;
   switchCurrentEmployee: (employeeId: string) => void;
   updateEmployee: (id: string, updated: Partial<Employee>) => void;
@@ -163,6 +165,14 @@ export const WorkshopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   });
 
+  const [isGuestVisitor, setIsGuestVisitor] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('motorad_is_guest') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
   const [activeBannerNotification, setActiveBannerNotification] = useState<PushNotification | null>(() => {
     return notifications.find(n => !n.read && n.type === 'critical_stock') || null;
   });
@@ -273,8 +283,29 @@ export const WorkshopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem(STORAGE_KEYS.AUTH_STATE, String(isAuthenticated));
   }, [isAuthenticated]);
 
-  const currentEmployee = employees.find(e => e.id === currentEmployeeId) || employees[0] || INITIAL_EMPLOYEES[0];
-  const isAdmin = currentEmployee.role === 'Super Admin' || !!currentEmployee.permissions.canManageEmployees;
+  const guestEmployeeProfile: Employee = {
+    id: 'guest-visitor',
+    name: 'Pengunjung Bengkel',
+    email: 'pengunjung@motobengkel.id',
+    phone: '0812-0000-0000',
+    role: 'Pengunjung Bengkel' as any,
+    status: 'Aktif',
+    specialization: 'Pelanggan / Pengunjung',
+    rating: 5,
+    completedJobs: 0,
+    permissions: {
+      canManageInventory: false,
+      canManageEmployees: false,
+      canManageServices: false,
+      canExportReports: false,
+      canConfigureRAD: false,
+    }
+  };
+
+  const currentEmployee = isGuestVisitor 
+    ? guestEmployeeProfile 
+    : (employees.find(e => e.id === currentEmployeeId) || employees[0] || INITIAL_EMPLOYEES[0]);
+  const isAdmin = !isGuestVisitor && (currentEmployee.role === 'Super Admin' || !!currentEmployee.permissions.canManageEmployees);
 
   const criticalParts = inventory.filter(p => p.stock <= p.minStock);
   const lowStockCount = criticalParts.length;
@@ -600,8 +631,20 @@ export const WorkshopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     setCurrentEmployeeId(found.id);
     setIsAuthenticated(true);
+    setIsGuestVisitor(false);
+    localStorage.setItem('motorad_is_guest', 'false');
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, found.id);
     localStorage.setItem(STORAGE_KEYS.AUTH_STATE, 'true');
+
+    // If logging in as admin/management and tour hasn't been completed, set tour trigger flag
+    const isUserAdmin = found.role === 'Super Admin' || !!found.permissions?.canManageEmployees;
+    if (isUserAdmin) {
+      try {
+        if (localStorage.getItem('motorad_admin_tour_completed_v1') !== 'true') {
+          sessionStorage.setItem('motorad_trigger_admin_tour', 'true');
+        }
+      } catch {}
+    }
 
     triggerPushNotification(
       'Login Berhasil',
@@ -612,9 +655,27 @@ export const WorkshopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { success: true, message: `Login berhasil sebagai ${found.name}` };
   };
 
+  const loginAsGuest = () => {
+    setIsGuestVisitor(true);
+    setIsAuthenticated(true);
+    setActiveView('dashboard');
+    localStorage.setItem('motorad_is_guest', 'true');
+    localStorage.setItem(STORAGE_KEYS.AUTH_STATE, 'true');
+    triggerPushNotification(
+      'Portal Pengunjung Terbuka',
+      'Selamat datang di Pelacakan Servis MotoRAD! Silakan masukkan nomor plat motor Anda untuk melihat status real-time.',
+      'system'
+    );
+  };
+
   const logout = () => {
     setIsAuthenticated(false);
+    setIsGuestVisitor(false);
+    localStorage.setItem('motorad_is_guest', 'false');
     localStorage.setItem(STORAGE_KEYS.AUTH_STATE, 'false');
+    try {
+      sessionStorage.removeItem('motorad_trigger_admin_tour');
+    } catch {}
     triggerPushNotification(
       'Sesi Berakhir',
       'Anda telah keluar dari sistem manajemen MotoRAD Engine.',
@@ -695,7 +756,9 @@ export const WorkshopProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       currentEmployee,
       isAuthenticated,
       isAdmin,
+      isGuestVisitor,
       login,
+      loginAsGuest,
       logout,
       switchCurrentEmployee,
       updateEmployee,

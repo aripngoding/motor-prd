@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
 import { useWorkshop } from '../../context/WorkshopContext';
 import { 
   X, 
@@ -36,6 +37,24 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
   const [partQty, setPartQty] = useState(1);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [showReceiptPreview, setShowReceiptPreview] = useState<boolean>(false);
+  const [qrReceiptUrl, setQrReceiptUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (!order) return;
+    const payload = JSON.stringify({
+      orderNumber: order.orderNumber,
+      plateNumber: order.plateNumber,
+      customerName: order.customerName,
+      app: 'MotoRAD'
+    });
+    QRCode.toDataURL(payload, {
+      width: 140,
+      margin: 1,
+      color: { dark: '#0f172a', light: '#ffffff' }
+    })
+      .then(url => setQrReceiptUrl(url))
+      .catch(() => {});
+  }, [order]);
 
   const statuses: ServiceStatus[] = [
     'Antre',
@@ -87,12 +106,15 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
     };
 
     window.addEventListener('afterprint', cleanup);
-    window.print();
+    
+    setTimeout(() => {
+      window.print();
+    }, 50);
 
     // Fallback timer cleanup
     setTimeout(() => {
       document.body.classList.remove('printing-receipt');
-    }, 1000);
+    }, 2000);
   };
 
   const partsTotalCost = order.partsUsed.reduce((acc, p) => acc + (p.price * p.quantity), 0);
@@ -103,7 +125,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
       {/* 1. MINIMALIST SERVICE RECEIPT (PRINT-ONLY LAYOUT)                         */}
       {/* Styled specifically for 80mm / thermal slip printer during window.print() */}
       {/* ========================================================================= */}
-      <div id="printable-service-receipt" className="hidden font-mono text-[11px] text-black bg-white leading-relaxed">
+      <div id="printable-service-receipt" className="hidden print:block font-mono text-[11px] text-black bg-white leading-relaxed">
         {/* Header */}
         <div className="text-center pb-2 border-b-2 border-dashed border-black">
           <div className="text-sm font-extrabold tracking-wider">MOTORAD ENGINE</div>
@@ -115,7 +137,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
         {/* Transaction Metadata */}
         <div className="py-2 border-b border-dashed border-black text-[10px] space-y-0.5">
           <div className="flex justify-between">
-            <span>NO. RESI</span>
+            <span>NO. NOTA</span>
             <span className="font-bold">{order.orderNumber}</span>
           </div>
           <div className="flex justify-between">
@@ -208,10 +230,18 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
           </div>
         </div>
 
+        {/* QR Code Sticker on Printable Receipt */}
+        {qrReceiptUrl && (
+          <div className="py-2 border-b border-dashed border-black flex flex-col items-center justify-center text-center">
+            <img src={qrReceiptUrl} alt={`QR Nota ${order.orderNumber}`} className="w-16 h-16 border border-black p-0.5 mx-auto" />
+            <span className="text-[8px] font-bold tracking-wider mt-1">PINDAI STIKER QR UNTUK STATUS REAL-TIME</span>
+          </div>
+        )}
+
         {/* Warranty Notice & Footer */}
         <div className="pt-2 text-center text-[9px] leading-tight space-y-1">
           <div className="font-bold text-[10px]">*** GARANSI SERVIS 7 HARI / 500 KM ***</div>
-          <div className="text-gray-700">Simpan resi fisik ini sebagai bukti sah klaim garansi servis.</div>
+          <div className="text-gray-700">Simpan nota fisik ini sebagai bukti sah klaim garansi servis.</div>
           <div className="pt-1 font-bold">TERIMA KASIH ATAS KUNJUNGAN ANDA!</div>
           <div className="text-[8px] text-gray-500">Sistem Servis RAD - MotoRAD Engine v4.0</div>
         </div>
@@ -243,17 +273,17 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
               </div>
             </div>
 
-            {/* Action Buttons: Cetak Resi, Cetak Faktur PDF, Close */}
+            {/* Action Buttons: Cetak Nota, Cetak Faktur PDF, Close */}
             <div className="flex items-center gap-1.5 self-end sm:self-center">
-              {/* Main "Cetak Resi" Button triggering window.print() */}
+              {/* Main "Cetak Nota" Button triggering window.print() */}
               <button
                 type="button"
                 onClick={handlePrintReceipt}
-                className="flex items-center gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm transition-all hover:shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-                title="Cetak Struk Resi Thermal (window.print())"
+                className="flex items-center gap-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm transition-all hover:shadow-[0_0_15px_rgba(14,165,233,0.4)] cursor-pointer"
+                title="Cetak Nota Servis (Format Struk Minimalis 80mm)"
               >
-                <Receipt className="h-4 w-4" />
-                <span>Cetak Resi</span>
+                <Printer className="h-4 w-4" />
+                <span>Cetak Nota</span>
               </button>
 
               {/* Full Invoice PDF Download */}
@@ -263,7 +293,7 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
                 className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:text-sky-600 hover:border-sky-300 transition-colors shadow-xs"
                 title="Unduh Faktur PDF Lengkap"
               >
-                <Printer className="h-3.5 w-3.5" />
+                <FileText className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Faktur PDF</span>
               </button>
 
@@ -524,6 +554,15 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
                     <span className="text-sky-800">{formatRupiah(order.totalCost)}</span>
                   </div>
 
+                  {/* QR Code Sticker on Thermal Receipt */}
+                  {qrReceiptUrl && (
+                    <div className="py-2 border-b border-dashed border-slate-400 flex flex-col items-center justify-center gap-1 text-center">
+                      <img src={qrReceiptUrl} alt={`QR Nota ${order.orderNumber}`} className="w-16 h-16 border border-slate-300 p-0.5" />
+                      <span className="text-[8px] font-bold tracking-wider text-slate-700">SCAN QR TRACKER PENGUNJUNG</span>
+                      <span className="text-[7.5px] text-slate-500">Pindai kode ini di dashboard pengunjung</span>
+                    </div>
+                  )}
+
                   <div className="pt-2 text-center text-[8px] text-slate-500 space-y-0.5">
                     <div className="font-bold text-slate-700">* GARANSI SERVIS 7 HARI / 500 KM *</div>
                     <div>Simpan struk ini sebagai bukti klaim garansi.</div>
@@ -533,10 +572,10 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
                   <button
                     type="button"
                     onClick={handlePrintReceipt}
-                    className="w-full mt-3 rounded-lg bg-sky-500 hover:bg-sky-600 text-white py-1.5 font-sans text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors"
+                    className="w-full mt-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white py-1.5 font-sans text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
                   >
-                    <Receipt className="h-3.5 w-3.5" />
-                    <span>Cetak Struk Sekarang</span>
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Cetak Nota Sekarang</span>
                   </button>
                 </div>
               )}
@@ -553,15 +592,16 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({ order, o
               <button
                 type="button"
                 onClick={handlePrintReceipt}
-                className="flex items-center gap-1.5 rounded-xl bg-sky-500 hover:bg-sky-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs transition-colors"
+                className="flex items-center gap-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white px-3.5 py-1.5 text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                title="Cetak Nota Servis (Format Struk Minimalis 80mm)"
               >
-                <Receipt className="h-3.5 w-3.5" />
-                <span>Cetak Resi</span>
+                <Printer className="h-3.5 w-3.5" />
+                <span>Cetak Nota</span>
               </button>
               <button
                 type="button"
                 onClick={onClose}
-                className="rounded-xl bg-slate-100 px-4 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors"
+                className="rounded-xl bg-slate-100 px-4 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
               >
                 Tutup
               </button>
